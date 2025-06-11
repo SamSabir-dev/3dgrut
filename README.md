@@ -120,6 +120,16 @@ docker run -v --rm -it --gpus=all --net=host --ipc=host -v $PWD:/workspace --run
 > [!NOTE]
 > Remember to set DISPLAY environment variable if you are running on a remote server from command line.
 
+### fused-ssim optional dependency
+`fused-ssim` provides a fast CUDA implementation of the Structural Similarity
+Index. It may fail to compile on certain platforms, such as Google Colab.
+Training still works thanks to the fallback in
+`threedgrut/model/losses.py`. You can disable SSIM by setting
+`use_ssim: false` in your configuration files or by removing the
+`git+https://github.com/rahul-goel/fused-ssim@...` line from
+`requirements.txt`. Metrics that depend on SSIM will not be computed when
+the dependency is absent.
+
 ## 💻 2. Train 3DGRT or 3DGUT scenes
 
 We provide different configurations for training using 3DGRT and 3DGUT models on common benchmark datasets. 
