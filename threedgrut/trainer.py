@@ -353,8 +353,9 @@ class Trainer3DGRUT:
             pred_rgb_full = rgb_pred.permute(0, 3, 1, 2)
             pred_rgb_full_clipped = rgb_pred.clip(0, 1).permute(0, 3, 1, 2)
 
-            with torch.cuda.nvtx.range(f"criterions_ssim"):
-                metrics["ssim"] = ssim(pred_rgb_full, rgb_gt_full).item()
+            if self.conf.loss.use_ssim:
+                with torch.cuda.nvtx.range(f"criterions_ssim"):
+                    metrics["ssim"] = ssim(pred_rgb_full, rgb_gt_full).item()
             with torch.cuda.nvtx.range(f"criterions_lpips"):
                 metrics["lpips"] = lpips(pred_rgb_full_clipped, rgb_gt_full).item()
 
@@ -498,7 +499,8 @@ class Trainer3DGRUT:
 
         mean_psnr = np.mean(metrics["psnr"])
         writer.add_scalar("psnr/val", mean_psnr, global_step)
-        writer.add_scalar("ssim/val", np.mean(metrics["ssim"]), global_step)
+        if self.conf.loss.use_ssim:
+            writer.add_scalar("ssim/val", np.mean(metrics["ssim"]), global_step)
         writer.add_scalar("lpips/val", np.mean(metrics["lpips"]), global_step)
         writer.add_scalar("hits/min/val", np.mean(metrics["hits_min"]), global_step)
         writer.add_scalar("hits/max/val", np.mean(metrics["hits_max"]), global_step)
@@ -516,7 +518,11 @@ class Trainer3DGRUT:
             ssim_loss = np.mean(metrics["losses"]["ssim_loss"])
             writer.add_scalar("loss/ssim/val", ssim_loss, global_step)
 
-        table = {k: np.mean(v) for k, v in metrics.items() if k in ("psnr", "ssim", "lpips")}
+        table = {
+            k: np.mean(v)
+            for k, v in metrics.items()
+            if k in ("psnr", "lpips") or (k == "ssim" and self.conf.loss.use_ssim)
+        }
         for time_key in mean_timings:
             table[time_key] = f"{'{:.2f}'.format(mean_timings[time_key])}" + " ms/it"
         logger.log_table(f"📊 Validation Metrics - Step {global_step}", record=table)

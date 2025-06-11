@@ -14,7 +14,13 @@
 # limitations under the License.
 
 import torch
-from fused_ssim import fused_ssim
+
+try:
+    from fused_ssim import fused_ssim
+except ImportError:
+    fused_ssim = None
+
+import kornia.metrics
 
 
 @torch.cuda.nvtx.range("l1_loss")
@@ -30,4 +36,6 @@ def l2_loss(network_output, gt):
 @torch.cuda.nvtx.range("ssim")
 def ssim(img1, img2, window_size=11, size_average=True):
     # predicted_image, gt_image: [BS, CH, H, W], predicted_image is differentiable
-    return fused_ssim(img1, img2, padding="valid")
+    if fused_ssim is not None:
+        return fused_ssim(img1, img2, padding="valid")
+    return kornia.metrics.ssim(img1, img2, window_size=window_size).mean()
